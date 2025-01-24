@@ -419,7 +419,7 @@ int
             serverPort = static_cast<uint16_t>(strtoul(argv[i] + strlen("--server="), &err, 10));
             if (*err != 0)
             {
-                fprintf(stderr, "Error: Missing process id\n");
+                fprintf(stderr, "Error: Missing server port\n");
                 exit(EXIT_FAILURE);
             }
 
