@@ -207,7 +207,7 @@ namespace NetcoreDbgTest.Script
     }
 }
 
-namespace VSCodeTestExceptionBreakpoint
+namespace VSCodeTestUnhandledException
 {
     class Program
     {
