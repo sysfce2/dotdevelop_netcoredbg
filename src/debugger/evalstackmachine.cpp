@@ -660,7 +660,7 @@ namespace
         return E_INVALIDARG;
     }
 
-    HRESULT GetOperandDataTypeByValue(ICorDebugValue *pValue, CorElementType elemType, PVOID &resultData, int32_t &resultType)
+    HRESULT GetOperandDataTypeByValue(ICorDebugValue *pValue, CorElementType elemType, PVOID *resultData, int32_t &resultType)
     {
         HRESULT Status;
 
@@ -670,12 +670,12 @@ namespace
             ToRelease<ICorDebugValue> iCorValue;
             BOOL isNull = FALSE;
             IfFailRet(DereferenceAndUnboxValue(pValue, &iCorValue, &isNull));
-            resultData = 0;
+            *resultData = 0;
             if (!isNull)
             {
                 std::string String;
                 IfFailRet(PrintStringValue(iCorValue, String));
-                resultData = Interop::AllocString(String);
+                *resultData = Interop::AllocString(String);
             }
             return S_OK;
         }
@@ -703,7 +703,7 @@ namespace
 
         ToRelease<ICorDebugGenericValue> iCorGenValue;
         IfFailRet(pValue->QueryInterface(IID_ICorDebugGenericValue, (LPVOID *) &iCorGenValue));
-        return iCorGenValue->GetValue(resultData);
+        return iCorGenValue->GetValue(*resultData);
     }
 
     HRESULT GetValueByOperandDataType(PVOID valueData, BasicTypes valueType, ICorDebugValue **ppValue, EvalData &ed)
@@ -943,8 +943,8 @@ namespace
         int32_t valueType2 = 0;
         PVOID resultData = NULL;
         int32_t resultType = 0;
-        if (SUCCEEDED(Status = GetOperandDataTypeByValue(iCorRealValue1, elemType1, valueData1, valueType1)) &&
-            SUCCEEDED(Status = GetOperandDataTypeByValue(iCorRealValue2, elemType2, valueData2, valueType2)) &&
+        if (SUCCEEDED(Status = GetOperandDataTypeByValue(iCorRealValue1, elemType1, &valueData1, valueType1)) &&
+            SUCCEEDED(Status = GetOperandDataTypeByValue(iCorRealValue2, elemType2, &valueData2, valueType2)) &&
             SUCCEEDED(Status = Interop::CalculationDelegate(valueData1, valueType1, valueData2, valueType2, (int32_t)opType, resultType, &resultData, output)))
         {
             Status = GetValueByOperandDataType(resultData, (BasicTypes)resultType, &evalStack.front().iCorValue, ed);
@@ -1006,7 +1006,7 @@ namespace
         int64_t fakeValueData2 = 0;
         PVOID resultData = NULL;
         int32_t resultType = 0;
-        if (SUCCEEDED(Status = GetOperandDataTypeByValue(iCorRealValue, elemType, valueData1, valueType1)) &&
+        if (SUCCEEDED(Status = GetOperandDataTypeByValue(iCorRealValue, elemType, &valueData1, valueType1)) &&
             SUCCEEDED(Status = Interop::CalculationDelegate(valueData1, valueType1, &fakeValueData2, (int32_t)BasicTypes::TypeInt64, (int32_t)opType, resultType, &resultData, output)))
         {
             Status = GetValueByOperandDataType(resultData, (BasicTypes)resultType, &evalStack.front().iCorValue, ed);
@@ -2009,7 +2009,7 @@ HRESULT EvalStackMachine::Run(ICorDebugThread *pThread, FrameLevel frameLevel, i
 
     do
     {
-        if (FAILED(Status = Interop::NextStackCommand(pStackProgram, Command, pArguments, output)) ||
+        if (FAILED(Status = Interop::NextStackCommand(pStackProgram, Command, &pArguments, output)) ||
             Command == ProgramFinished ||
             FAILED(Status = CommandImplementation[Command](evalStack, pArguments, output, m_evalData)))
             break;

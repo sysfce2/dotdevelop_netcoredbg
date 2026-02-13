@@ -497,7 +497,7 @@ void ReleaseStackMachineProgram(PVOID pStackProgram)
 
 // Note, managed part will release Ptr unmanaged memory at object finalizer call after ReleaseStackMachineProgram() call.
 // Native part must not release Ptr memory, allocated by managed part.
-HRESULT NextStackCommand(PVOID pStackProgram, int32_t &Command, PVOID &Ptr, std::string &textOutput)
+HRESULT NextStackCommand(PVOID pStackProgram, int32_t &Command, PVOID *Ptr, std::string &textOutput)
 {
     std::unique_lock<Utility::RWLock::Reader> read_lock(CLRrwlock.reader);
     if (!nextStackCommandDelegate || !pStackProgram)
@@ -505,7 +505,7 @@ HRESULT NextStackCommand(PVOID pStackProgram, int32_t &Command, PVOID &Ptr, std:
 
     textOutput = "";
     BSTR wTextOutput = nullptr;
-    HRESULT Status = nextStackCommandDelegate(pStackProgram, &Command, &Ptr, &wTextOutput);
+    HRESULT Status = nextStackCommandDelegate(pStackProgram, &Command, Ptr, &wTextOutput);
     read_lock.unlock();
 
     if (wTextOutput)

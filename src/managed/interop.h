@@ -102,7 +102,7 @@ namespace Interop
     HRESULT CalculationDelegate(PVOID firstOp, int32_t firstType, PVOID secondOp, int32_t secondType, int32_t operationType, int32_t &resultType, PVOID *data, std::string &errorText);
     HRESULT GenerateStackMachineProgram(const std::string &expr, PVOID *ppStackProgram, std::string &textOutput);
     void ReleaseStackMachineProgram(PVOID pStackProgram);
-    HRESULT NextStackCommand(PVOID pStackProgram, int32_t &Command, PVOID &Ptr, std::string &textOutput);
+    HRESULT NextStackCommand(PVOID pStackProgram, int32_t &Command, PVOID *Ptr, std::string &textOutput);
     PVOID AllocString(const std::string &str);
     HRESULT StringToUpper(std::string &String);
     BSTR SysAllocStringLen(int32_t size);
