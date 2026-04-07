@@ -1218,7 +1218,7 @@ namespace
 
         size_t typeArgsCount = evalStack.front().genericTypeCache.size();
         ULONG32 realArgsCount = Int + (isInstance ? 1 : 0);
-        std::vector<ICorDebugType*> iCorTypeArgs;
+        std::vector<ToRelease<ICorDebugType>> iCorTypeArgs;
         std::vector<ICorDebugValue*> iCorValueArgs;
         iCorValueArgs.reserve(realArgsCount);
         iCorTypeArgs.reserve(typeArgsCount);
@@ -1251,10 +1251,13 @@ namespace
         for (size_t i = typeArgsCount; i > 0; i--)
         {
             iCorTypeArgs.emplace_back(evalStack.front().genericTypeCache[i-1].GetPtr());
+            iCorTypeArgs.back()->AddRef();
         }
 
         evalStack.front().ResetEntry();
-        Status = ed.pEvalHelpers->EvalGenericFunction(ed.pThread, iCorFunc, iCorTypeArgs.data(), (ULONG32)iCorTypeArgs.size(), iCorValueArgs.data(), (ULONG32)iCorValueArgs.size(), &evalStack.front().iCorValue, ed.evalFlags);
+        Status = ed.pEvalHelpers->EvalGenericFunction(ed.pThread, iCorFunc, reinterpret_cast<ICorDebugType **>(iCorTypeArgs.data()),
+                                                      (ULONG32)iCorTypeArgs.size(), iCorValueArgs.data(),
+                                                      (ULONG32)iCorValueArgs.size(), &evalStack.front().iCorValue, ed.evalFlags);
 
         // CORDBG_S_FUNC_EVAL_HAS_NO_RESULT: Some Func evals will lack a return value, such as those whose return type is void.
         if (Status == CORDBG_S_FUNC_EVAL_HAS_NO_RESULT)
