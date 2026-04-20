@@ -634,6 +634,7 @@ namespace VSCodeTestVariables
                 Context.PrepareStart(@"__FILE__:__LINE__");
                 Context.AddBreakpoint(@"__FILE__:__LINE__", "BREAK1");
                 Context.AddBreakpoint(@"__FILE__:__LINE__", "BREAK2");
+                Context.AddBreakpoint(@"__FILE__:__LINE__", "BREAK3");
                 Context.AddBreakpoint(@"__FILE__:__LINE__", "bp2");
                 Context.AddBreakpoint(@"__FILE__:__LINE__", "bp3");
                 Context.AddBreakpoint(@"__FILE__:__LINE__", "bp4");
@@ -716,7 +717,7 @@ namespace VSCodeTestVariables
 
             int dummy1 = 1;                                     Label.Breakpoint("BREAK1");
 
-            Label.Checkpoint("setup_var", "test_var", (Object context) => {
+            Label.Checkpoint("setup_var", "test_nullable", (Object context) => {
                 Context Context = (Context)context;
                 Context.WasBreakpointHit(@"__FILE__:__LINE__", "BREAK1");
                 Int64 frameId = Context.DetectFrameId(@"__FILE__:__LINE__", "BREAK1");
@@ -1216,12 +1217,60 @@ namespace VSCodeTestVariables
                 Context.Continue(@"__FILE__:__LINE__");
             });
 
+            Guid? nullable_guid = Guid.NewGuid();
+            Guid? nullable_guid2 = null;
+            Guid? nullable_guid3 = new Guid();
+            DateTime? nullable_dt1 = DateTime.Now;
+            DateTime? nullable_dt2 = null;
+            TimeSpan? nullable_ts1 = TimeSpan.FromSeconds(42);
+            TimeSpan? nullable_ts2 = null;
+            int? nullable_i1 = 42;
+            int? nullable_i2 = null;
+            bool? nullable_b1 = true;
+            bool? nullable_b2 = null;
+            decimal? nullable_dec1 = 123;
+            decimal? nullable_dec2 = null;
+
             int dummy2 = 2;                                     Label.Breakpoint("BREAK2");
 
-            Label.Checkpoint("test_var", "bp_func_test", (Object context) => {
+            Label.Checkpoint("test_nullable", "test_var", (Object context) => {
                 Context Context = (Context)context;
                 Context.WasBreakpointHit(@"__FILE__:__LINE__", "BREAK2");
                 Int64 frameId = Context.DetectFrameId(@"__FILE__:__LINE__", "BREAK2");
+                int variablesReference = Context.GetVariablesReference(@"__FILE__:__LINE__", frameId, "Locals");
+
+                Context.GetAndCheckValue(@"__FILE__:__LINE__", frameId, "nullable_guid", "{System.Guid}");
+                Context.GetAndCheckValue(@"__FILE__:__LINE__", frameId, "nullable_guid2", "null");
+                Context.GetAndCheckValue(@"__FILE__:__LINE__", frameId, "nullable_guid3", "{System.Guid}");
+                Context.GetAndCheckValue(@"__FILE__:__LINE__", frameId, "nullable_dt1", "{System.DateTime}");
+                Context.GetAndCheckValue(@"__FILE__:__LINE__", frameId, "nullable_dt2", "null");
+                Context.GetAndCheckValue(@"__FILE__:__LINE__", frameId, "nullable_ts1", "{System.TimeSpan}");
+                Context.GetAndCheckValue(@"__FILE__:__LINE__", frameId, "nullable_ts2", "null");
+                Context.GetAndCheckValue(@"__FILE__:__LINE__", frameId, "nullable_i1", "42");
+                Context.GetAndCheckValue(@"__FILE__:__LINE__", frameId, "nullable_i2", "null");
+                Context.GetAndCheckValue(@"__FILE__:__LINE__", frameId, "nullable_b1", "true");
+                Context.GetAndCheckValue(@"__FILE__:__LINE__", frameId, "nullable_b2", "null");
+                Context.GetAndCheckValue(@"__FILE__:__LINE__", frameId, "nullable_dec1", "123");
+                Context.GetAndCheckValue(@"__FILE__:__LINE__", frameId, "nullable_dec2", "null");
+
+                int variablesReference_ts1 = Context.GetChildVariablesReference(@"__FILE__:__LINE__", variablesReference, "nullable_ts1");
+                Context.EvalVariable(@"__FILE__:__LINE__", variablesReference_ts1, "int", "Milliseconds", "0");
+                Context.EvalVariable(@"__FILE__:__LINE__", variablesReference_ts1, "int", "Hours", "0");
+
+                int variablesReference_guid3 = Context.GetChildVariablesReference(@"__FILE__:__LINE__", variablesReference, "nullable_guid3");
+                Context.EvalVariable(@"__FILE__:__LINE__", variablesReference_guid3, "int", "Version", "0");
+                Context.EvalVariable(@"__FILE__:__LINE__", variablesReference_guid3, "int", "Variant", "0");
+
+                Context.Continue(@"__FILE__:__LINE__");
+            });
+
+
+            int dummy3 = 3;                                     Label.Breakpoint("BREAK3");
+
+            Label.Checkpoint("test_var", "bp_func_test", (Object context) => {
+                Context Context = (Context)context;
+                Context.WasBreakpointHit(@"__FILE__:__LINE__", "BREAK3");
+                Int64 frameId = Context.DetectFrameId(@"__FILE__:__LINE__", "BREAK3");
                 int variablesReference = Context.GetVariablesReference(@"__FILE__:__LINE__", frameId, "Locals");
 
                 Context.GetAndCheckValue(@"__FILE__:__LINE__", frameId, "varChar", "12622");
