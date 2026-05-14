@@ -26,6 +26,11 @@ if (CLR_CMAKE_PLATFORM_UNIX)
     add_compile_options(-fstack-protector-strong)
   endif(CLR_CMAKE_PLATFORM_DARWIN)
 
+  # Specify the minimum supported version of macOS (use same as diagnostics for dbgshim build)
+  if(CLR_CMAKE_PLATFORM_DARWIN)
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "12.0")
+  endif(CLR_CMAKE_PLATFORM_DARWIN)
+
   add_definitions(-DDISABLE_CONTRACTS)
   # The -ferror-limit is helpful during the porting, it makes sure the compiler doesn't stop
   # after hitting just about 20 errors.
