@@ -33,6 +33,7 @@ namespace InteropDebugging
 class InteropRendezvousBreakpoint;
 class InteropBreakpoints;
 class InteropLineBreakpoints;
+class InteropFuncBreakpoints;
 class InteropLibraries;
 } // namespace InteropDebugging
 #endif // INTEROP_DEBUGGING
@@ -85,6 +86,9 @@ public:
     HRESULT InteropSetLineBreakpoints(pid_t pid, InteropDebugging::InteropLibraries *pInteropLibraries, const std::string& filename,
                                       const std::vector<LineBreakpoint> &lineBreakpoints, std::vector<Breakpoint> &breakpoints,
                                       std::function<void()> StopAllThreads, std::function<void(std::uintptr_t)> FixAllThreads);
+    HRESULT InteropSetFuncBreakpoints(pid_t pid, InteropDebugging::InteropLibraries *pInteropLibraries,
+                                      const std::vector<FuncBreakpoint> &funcBreakpoints, std::vector<Breakpoint> &breakpoints,
+                                      std::function<void()> StopAllThreads, std::function<void(std::uintptr_t)> FixAllThreads);
     HRESULT InteropAllBreakpointsActivate(pid_t pid, bool act, std::function<void()> StopAllThreads, std::function<void(std::uintptr_t)> FixAllThreads);
     HRESULT InteropBreakpointActivate(pid_t pid, uint32_t id, bool act, std::function<void()> StopAllThreads, std::function<void(std::uintptr_t)> FixAllThreads);
     // In case of error - return `false`.
@@ -128,6 +132,7 @@ private:
     // implementation for line breakpoint logic (close to managed line breakpoints we already have). In case of managed line breakpoints,
     // "low level" layer is CoreCLR debug API itself.
     std::unique_ptr<InteropDebugging::InteropLineBreakpoints> m_sharedInteropLineBreakpoints;
+    std::unique_ptr<InteropDebugging::InteropFuncBreakpoints> m_sharedInteropFuncBreakpoints;
 #endif // INTEROP_DEBUGGING
 
     std::mutex m_nextBreakpointIdMutex;

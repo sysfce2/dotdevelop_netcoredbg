@@ -1332,10 +1332,10 @@ HRESULT CLIProtocol::doCommand<CommandTag::Break>(const std::string &input, cons
     IfFailRet(BreakCommandParseInput(input, filename, linenum, funcname, params, condition, output));
 
     std::string modulename;
-    Breakpoint breakpoint;
+    std::vector<Breakpoint> breakpoints;
     if (!filename.empty())
     {
-        Status = m_breakpointsHandle.SetLineBreakpoint(m_sharedDebugger, modulename, filename, linenum, condition, breakpoint);
+        Status = m_breakpointsHandle.SetLineBreakpoint(m_sharedDebugger, modulename, filename, linenum, condition, breakpoints);
     }
     else
     {
@@ -1350,11 +1350,18 @@ HRESULT CLIProtocol::doCommand<CommandTag::Break>(const std::string &input, cons
         // remove spaces in params
         params.erase(std::remove(params.begin(), params.end(), ' '), params.end());
 
-        Status = m_breakpointsHandle.SetFuncBreakpoint(m_sharedDebugger, modulename, funcname, params, condition, breakpoint);
+        Status = m_breakpointsHandle.SetFuncBreakpoint(m_sharedDebugger, modulename, funcname, params, condition, breakpoints);
     }
 
     if (SUCCEEDED(Status))
-        PrintBreakpoint(breakpoint, output);
+    {
+        for (auto &breakpoint : breakpoints)
+        {
+            std::string tmpOutput;
+            PrintBreakpoint(breakpoint, tmpOutput);
+            output += (output.empty() ?  "" : "\n") + tmpOutput;
+        }
+    }
     else
         output = "Unknown breakpoint location format";
 

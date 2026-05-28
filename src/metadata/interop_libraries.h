@@ -69,6 +69,22 @@ public:
     std::uintptr_t FindAddrBySourceAndLine(const std::string &fileName, unsigned lineNum, unsigned &resolvedLineNum, std::string &resolvedFullPath, bool &resolvedIsThumbCode);
     std::uintptr_t FindAddrBySourceAndLineForLib(std::uintptr_t startAddr, const std::string &fileName, unsigned lineNum, unsigned &resolvedLineNum, std::string &resolvedFullPath, bool &resolvedIsThumbCode);
 
+    struct FuncAddrEntry {
+        std::uintptr_t addr;         // Absolute address (from DW_AT::low_pc + libStartAddr)
+        std::string name;            // Demangled name (from DW_AT::name)
+        std::string linkageName;     // Mangled name (from DW_AT::linkage_name)
+        std::string sourceFile;      // Source file path if available
+        int sourceLine;              // Source line number if available
+    };
+    // Search all loaded native modules for functions matching funcName.
+    // Returns vector of matches with runtime addresses.
+    // moduleFilter: if non-empty, restrict search to the specified library name.
+    std::vector<FuncAddrEntry> FindAddrByFuncName(const std::string &funcName, const std::string &moduleFilter = "");
+    // Search a specific library for functions matching funcName.
+    // libStartAddr: load address of the library to search.
+    // Returns vector of matches with section-relative offsets (caller must add libStartAddr for runtime address).
+    std::vector<FuncAddrEntry> FindAddrByFuncNameForLib(std::uintptr_t libStartAddr, const std::string &funcName);
+
     void FindDataForAddr(std::uintptr_t addr, std::string &libName, std::uintptr_t &libStartAddr, std::string &procName,
                          std::uintptr_t &procStartAddr, std::string &fullSourcePath, int &lineNum);
     bool FindDataForNotClrAddr(std::uintptr_t addr, std::string &libLoadName, std::string &procName);

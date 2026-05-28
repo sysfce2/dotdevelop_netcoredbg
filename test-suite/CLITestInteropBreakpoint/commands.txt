@@ -1,9 +1,11 @@
 set just-my-code 1
 b Program.cs:15
 b program.c:7
+b test_native_function
 r
 bt
 c
 bt
 c
-
+bt
+c

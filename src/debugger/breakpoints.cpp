@@ -11,6 +11,7 @@
 #include "debugger/breakpoint_interop_rendezvous.h"
 #include "debugger/breakpoints_interop.h"
 #include "debugger/breakpoints_interop_line.h"
+#include "debugger/breakpoints_interop_func.h"
 #include "debugger/breakpoints.h"
 #include "debugger/breakpointutils.h"
 #include "debugger/interop_brk_helpers.h"
@@ -44,6 +45,7 @@ Breakpoints::Breakpoints(std::shared_ptr<Modules> &sharedModules, std::shared_pt
         m_sharedInteropBreakpoints(new InteropDebugging::InteropBreakpoints()),
         m_uniqueInteropRendezvousBreakpoint(new InteropDebugging::InteropRendezvousBreakpoint(m_sharedInteropBreakpoints)),
         m_sharedInteropLineBreakpoints(new InteropDebugging::InteropLineBreakpoints(m_sharedInteropBreakpoints)),
+        m_sharedInteropFuncBreakpoints(new InteropDebugging::InteropFuncBreakpoints(m_sharedInteropBreakpoints)),
 #endif // INTEROP_DEBUGGING
         m_nextBreakpointId(1)
     {}
@@ -243,6 +245,7 @@ void Breakpoints::EnumerateBreakpoints(std::function<bool (const IDebugger::Brea
     m_uniqueExceptionBreakpoints->AddAllBreakpointsInfo(list);
 #ifdef INTEROP_DEBUGGING
     m_sharedInteropLineBreakpoints->AddAllBreakpointsInfo(list);
+    m_sharedInteropFuncBreakpoints->AddAllBreakpointsInfo(list);
 #endif // INTEROP_DEBUGGING
 
     // sort breakpoint list by ascending order, preserve order of elements with same number
@@ -320,7 +323,8 @@ void Breakpoints::InteropChangeRendezvousState(pid_t TGID, pid_t pid)
 
 bool Breakpoints::IsInteropLineBreakpoint(std::uintptr_t brkAddr, Breakpoint &breakpoint)
 {
-    return m_sharedInteropLineBreakpoints->IsLineBreakpoint(brkAddr, breakpoint);
+    return m_sharedInteropLineBreakpoints->IsLineBreakpoint(brkAddr, breakpoint) ||
+           m_sharedInteropFuncBreakpoints->IsFuncBreakpoint(brkAddr, breakpoint);
 }
 
 bool Breakpoints::InteropStepPrevToBrk(pid_t pid, std::uintptr_t brkAddr)
@@ -339,29 +343,48 @@ void Breakpoints::InteropRemoveAllAtDetach(pid_t pid)
     m_sharedInteropBreakpoints->RemoveAllAtDetach(pid);
     m_uniqueInteropRendezvousBreakpoint->RemoveAtDetach(pid);
     m_sharedInteropLineBreakpoints->RemoveAllAtDetach(pid);
+    m_sharedInteropFuncBreakpoints->RemoveAllAtDetach(pid);
 }
 
 void Breakpoints::InteropLoadModule(pid_t pid, std::uintptr_t startAddr, InteropDebugging::InteropLibraries *pInteropLibraries, std::vector<BreakpointEvent> &events)
 {
     m_sharedInteropLineBreakpoints->LoadModule(pid, startAddr, pInteropLibraries, events);
+    m_sharedInteropFuncBreakpoints->LoadModule(pid, pInteropLibraries, startAddr, [](){}, [](std::uintptr_t){}, events);
 }
 
 void Breakpoints::InteropUnloadModule(std::uintptr_t startAddr, std::uintptr_t endAddr, std::vector<BreakpointEvent> &events)
 {
     m_sharedInteropBreakpoints->UnloadModule(startAddr, endAddr);
     m_sharedInteropLineBreakpoints->UnloadModule(startAddr, endAddr, events);
+    m_sharedInteropFuncBreakpoints->UnloadModule(startAddr, endAddr, events);
 }
 
 HRESULT Breakpoints::InteropAllBreakpointsActivate(pid_t pid, bool act, std::function<void()> StopAllThreads, std::function<void(std::uintptr_t)> FixAllThreads)
 {
     // NOTE interop code provide error as `errno` code, we must convert it into HRESULT
-    return m_sharedInteropLineBreakpoints->AllBreakpointsActivate(pid, act, StopAllThreads, FixAllThreads) == 0 ? S_OK : E_FAIL;
+    int err = m_sharedInteropLineBreakpoints->AllBreakpointsActivate(pid, act, StopAllThreads, FixAllThreads);
+    err |= m_sharedInteropFuncBreakpoints->AllBreakpointsActivate(pid, act, StopAllThreads, FixAllThreads);
+    return err == 0 ? S_OK : E_FAIL;
 }
 
 HRESULT Breakpoints::InteropBreakpointActivate(pid_t pid, uint32_t id, bool act, std::function<void()> StopAllThreads, std::function<void(std::uintptr_t)> FixAllThreads)
 {
     // NOTE interop code provide error as `errno` code, we must convert it into HRESULT
-    return m_sharedInteropLineBreakpoints->BreakpointActivate(pid, id, act, StopAllThreads, FixAllThreads) == 0 ? S_OK : E_FAIL;
+    int err1 = m_sharedInteropLineBreakpoints->BreakpointActivate(pid, id, act, StopAllThreads, FixAllThreads);
+    int err2 = m_sharedInteropFuncBreakpoints->BreakpointActivate(pid, id, act, StopAllThreads, FixAllThreads);
+    return err1 == 0 && err2 == 0 ? S_OK : E_FAIL;
+}
+
+HRESULT Breakpoints::InteropSetFuncBreakpoints(pid_t pid, InteropDebugging::InteropLibraries *pInteropLibraries,
+                                               const std::vector<FuncBreakpoint> &funcBreakpoints, std::vector<Breakpoint> &breakpoints,
+                                               std::function<void()> StopAllThreads, std::function<void(std::uintptr_t)> FixAllThreads)
+{
+    return m_sharedInteropFuncBreakpoints->SetFuncBreakpoints(pid, pInteropLibraries, funcBreakpoints, breakpoints,
+                                                              StopAllThreads, FixAllThreads, [&]() -> uint32_t
+    {
+        std::lock_guard<std::mutex> lock(m_nextBreakpointIdMutex);
+        return m_nextBreakpointId++;
+    });
 }
 
 #endif // INTEROP_DEBUGGING

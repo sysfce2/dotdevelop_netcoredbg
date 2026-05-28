@@ -199,6 +199,7 @@ if (INTEROP_DEBUGGING)
             debugger/breakpoint_interop_rendezvous.cpp
             debugger/breakpoints_interop.cpp
             debugger/breakpoints_interop_line.cpp
+            debugger/breakpoints_interop_func.cpp
             debugger/interop_brk_helpers.cpp
             debugger/interop_debugging.cpp
             debugger/interop_mem_helpers.cpp

@@ -174,6 +174,9 @@ void InteropLineBreakpoints::AddAllBreakpointsInfo(std::vector<IDebugger::Breakp
 
         for(auto &bp : file_bps.second)
         {
+            if (bp.m_resolved_brkAddr)
+                continue;
+
             list.emplace_back(IDebugger::BreakpointInfo{ bp.m_id, false, true, 0, bp.m_breakpoint.condition,
                                                          file_bps.first, bp.m_breakpoint.line, 0, bp.m_breakpoint.module, {} });
         }

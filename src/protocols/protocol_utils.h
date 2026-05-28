@@ -44,9 +44,9 @@ private:
 public:
     HRESULT UpdateLineBreakpoint(std::shared_ptr<IDebugger> &sharedDebugger, int id, int linenum, Breakpoint &breakpoint);
     HRESULT SetLineBreakpoint(std::shared_ptr<IDebugger> &sharedDebugger, const std::string &module, const std::string &filename,
-                              int linenum, const std::string &condition, Breakpoint &breakpoints);
+                              int linenum, const std::string &condition, std::vector<Breakpoint> &breakpoints);
     HRESULT SetFuncBreakpoint(std::shared_ptr<IDebugger> &sharedDebugger, const std::string &module, const std::string &funcname,
-                              const std::string &params, const std::string &condition, Breakpoint &breakpoint);
+                              const std::string &params, const std::string &condition, std::vector<Breakpoint> &breakpoints);
     HRESULT SetExceptionBreakpoints(std::shared_ptr<IDebugger> &sharedDebugger, std::vector<ExceptionBreakpoint> &excBreakpoints,
                                     std::vector<Breakpoint> &breakpoints);
     HRESULT SetLineBreakpointCondition(std::shared_ptr<IDebugger> &sharedDebugger, uint32_t id, const std::string &condition);

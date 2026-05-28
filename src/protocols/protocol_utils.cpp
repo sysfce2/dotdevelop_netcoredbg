@@ -51,7 +51,7 @@ HRESULT BreakpointsHandle::UpdateLineBreakpoint(std::shared_ptr<IDebugger> &shar
 
 HRESULT BreakpointsHandle::SetLineBreakpoint(std::shared_ptr<IDebugger> &sharedDebugger,
                                              const std::string &module, const std::string &filename, int linenum,
-                                             const std::string &condition, Breakpoint &breakpoint)
+                                             const std::string &condition, std::vector<Breakpoint> &breakpoints)
 {
     HRESULT Status;
 
@@ -63,34 +63,39 @@ HRESULT BreakpointsHandle::SetLineBreakpoint(std::shared_ptr<IDebugger> &sharedD
 
     lineBreakpoints.emplace_back(module, linenum, condition);
 
-    std::vector<Breakpoint> breakpoints;
     IfFailRet(sharedDebugger->SetLineBreakpoints(filename, lineBreakpoints, breakpoints));
 
-    // Note, SetLineBreakpoints() will return new breakpoint in "breakpoints" with same index as we have it in "lineBreakpoints".
-    breakpoint = breakpoints.back();
-    breakpointsInSource.insert(std::make_pair(breakpoint.id, std::move(lineBreakpoints.back())));
+    // Note, SetLineBreakpoints() will return new breakpoint (the last one) in "breakpoints" for same data that were provided in "lineBreakpoints".
+    breakpointsInSource.insert(std::make_pair(breakpoints.back().id, std::move(lineBreakpoints.back())));
     return S_OK;
 }
 
 HRESULT BreakpointsHandle::SetFuncBreakpoint(std::shared_ptr<IDebugger> &sharedDebugger,
                                              const std::string &module, const std::string &funcname, const std::string &params,
-                                             const std::string &condition, Breakpoint &breakpoint)
+                                             const std::string &condition, std::vector<Breakpoint> &breakpoints)
 {
     HRESULT Status;
 
     std::vector<FuncBreakpoint> funcBreakpoints;
-    funcBreakpoints.reserve(m_funcBreakpoints.size() + 1); // size + new element
+    funcBreakpoints.reserve(m_funcBreakpoints.size() + 1); // size + new elements
     for (const auto &it : m_funcBreakpoints)
         funcBreakpoints.push_back(it.second);
 
     funcBreakpoints.emplace_back(module, funcname, params, condition);
 
-    std::vector<Breakpoint> breakpoints;
     IfFailRet(sharedDebugger->SetFuncBreakpoints(funcBreakpoints, breakpoints));
 
-    // Note, SetFuncBreakpoints() will return new breakpoint in "breakpoints" with same index as we have it in "funcBreakpoints".
-    breakpoint = breakpoints.back();
-    m_funcBreakpoints.insert(std::make_pair(breakpoint.id, std::move(funcBreakpoints.back())));
+    // Note, SetFuncBreakpoints() will return new breakpoints in "breakpoints" for same data that were provided in "funcBreakpoints".
+    for (auto &breakpoint : breakpoints)
+    {
+        if (breakpoint.module == funcBreakpoints.back().module &&
+            breakpoint.funcname == funcBreakpoints.back().func &&
+            breakpoint.params == funcBreakpoints.back().params &&
+            breakpoint.condition == funcBreakpoints.back().condition)
+        {
+            m_funcBreakpoints.insert(std::make_pair(breakpoint.id, funcBreakpoints.back()));
+        }
+    }
     return S_OK;
 }
 

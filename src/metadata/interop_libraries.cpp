@@ -743,5 +743,136 @@ bool InteropLibraries::FindDataForNotClrAddr(std::uintptr_t addr, std::string &l
     return isUserCode;
 }
 
+// Helper: search DWARF DIEs for DW_TAG::subprogram entries matching funcName.
+// Checks both DW_AT::name (demangled) and DW_AT::linkage_name (mangled) for exact match.
+static void FindFuncAddrInDwarfForLib(const std::unique_ptr<dwarf::dwarf> &dw, const std::string &funcName, std::vector<InteropLibraries::FuncAddrEntry> &results)
+{
+    if (!dw)
+        return;
+
+    for (const auto &cu : dw->compilation_units())
+    {
+        std::function<void(const dwarf::die&)> scanDie = [&](const dwarf::die &die)
+        {
+            if (die.tag == dwarf::DW_TAG::subprogram)
+            {
+                std::string name;
+                std::string linkageName;
+                for (auto &attr : die.attributes())
+                {
+                    switch (attr.first)
+                    {
+                    case dwarf::DW_AT::name:
+                        name = to_string(attr.second);
+                        break;
+                    case dwarf::DW_AT::linkage_name:
+                        linkageName = to_string(attr.second);
+                        break;
+                    default:
+                        break;
+                    }
+                }
+
+                bool match = (!name.empty() && name == funcName) || (!linkageName.empty() && linkageName == funcName);
+                if (match)
+                {
+                    try
+                    {
+                        auto low_pc = die[dwarf::DW_AT::low_pc];
+                        if (low_pc.valid())
+                        {
+                            InteropLibraries::FuncAddrEntry entry;
+                            entry.addr = (std::uintptr_t)low_pc.as_address();
+                            entry.name = std::move(name);
+                            entry.linkageName = std::move(linkageName);
+                            try
+                            {
+                                auto &lt = cu.get_line_table();
+                                auto it = lt.find_address(entry.addr);
+                                if (it != lt.end())
+                                {
+                                    entry.sourceFile = it->file->path;
+                                    entry.sourceLine = (int)it->line;
+                                }
+                            }
+                            catch (...) {}
+                            results.push_back(std::move(entry));
+                        }
+                    }
+                    catch (...) {}
+                }
+            }
+
+            for (const auto &child : die)
+                scanDie(child);
+        };
+
+        try
+        {
+            scanDie(cu.root());
+        }
+        catch (...) {}
+    }
+}
+
+std::vector<InteropLibraries::FuncAddrEntry> InteropLibraries::FindAddrByFuncNameForLib(std::uintptr_t libStartAddr, const std::string &funcName)
+{
+    std::lock_guard<std::mutex> lock(m_librariesInfoMutex);
+
+    std::vector<FuncAddrEntry> results;
+
+    auto find = m_librariesInfo.find(libStartAddr);
+    if (find == m_librariesInfo.end())
+        return results;
+
+    if (find->second.isCoreCLR)
+        return results;
+
+    FindFuncAddrInDwarfForLib(find->second.dw, funcName, results);
+
+    for (auto &entry : results)
+    {
+        entry.addr += libStartAddr;
+    }
+
+    return results;
+}
+
+std::vector<InteropLibraries::FuncAddrEntry> InteropLibraries::FindAddrByFuncName(const std::string &funcName, const std::string &moduleFilter)
+{
+    std::lock_guard<std::mutex> lock(m_librariesInfoMutex);
+
+    std::vector<FuncAddrEntry> results;
+
+    for (auto &lib : m_librariesInfo)
+    {
+        if (lib.second.isCoreCLR)
+            continue;
+
+        if (!moduleFilter.empty())
+        {
+            std::string libBaseName = GetBasename(lib.second.fullName);
+            static std::string versionDetect(".so.");
+            constexpr size_t versionDetectSize = 4;
+            if (libBaseName.size() > versionDetectSize)
+            {
+                size_t i = libBaseName.rfind(versionDetect);
+                if (i != std::string::npos)
+                    libBaseName = libBaseName.substr(0, i + 3);
+            }
+            if (libBaseName != moduleFilter)
+                continue;
+        }
+
+        size_t prevSize = results.size();
+        FindFuncAddrInDwarfForLib(lib.second.dw, funcName, results);
+        // Convert offsets to runtime addresses for newly added entries only
+        for (size_t i = prevSize; i < results.size(); ++i)
+            results[i].addr += lib.first;
+    }
+
+    return results;
+}
+
 } // namespace InteropDebugging
 } // namespace netcoredbg

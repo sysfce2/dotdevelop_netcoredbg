@@ -46,6 +46,8 @@ public:
     // Remove all related to unloaded library breakpoints entries in data structures.
     void UnloadModule(std::uintptr_t startAddr, std::uintptr_t endAddr, std::vector<BreakpointEvent> &events);
 
+private:
+
     struct InteropLineBreakpoint
     {
         uint32_t m_id;
@@ -55,7 +57,7 @@ public:
         int m_endLine;
         bool m_enabled;
         bool m_isThumbCode; // Is resolved address is thumb code.
-        ULONG32 m_times;
+        uint32_t m_times;
         // TODO `m_condition` support
 
         InteropLineBreakpoint() :
@@ -69,8 +71,6 @@ public:
         InteropLineBreakpoint& operator=(InteropLineBreakpoint &&that) = default;
         InteropLineBreakpoint& operator=(const InteropLineBreakpoint &that) = delete;
     };
-
-private:
 
     std::shared_ptr<InteropBreakpoints> m_sharedInteropBreakpoints;
 

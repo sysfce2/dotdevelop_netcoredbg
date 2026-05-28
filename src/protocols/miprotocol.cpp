@@ -618,7 +618,7 @@ static HRESULT HandleCommand(std::shared_ptr<IDebugger> &sharedDebugger, Breakpo
     } },
     { "break-insert", [&](const std::vector<std::string> &unmutable_args, std::string &output) -> HRESULT {
         HRESULT Status = E_FAIL;
-        Breakpoint breakpoint;
+        std::vector<Breakpoint> breakpoints;
         std::vector<std::string> args = unmutable_args;
 
         ProtocolUtils::StripArgs(args);
@@ -636,7 +636,7 @@ static HRESULT HandleCommand(std::shared_ptr<IDebugger> &sharedDebugger, Breakpo
             struct LineBreak lb;
 
             if (ProtocolUtils::ParseBreakpoint(args, lb)
-                && SUCCEEDED(breakpointsHandle.SetLineBreakpoint(sharedDebugger, lb.module, lb.filename, lb.linenum, lb.condition, breakpoint)))
+                && SUCCEEDED(breakpointsHandle.SetLineBreakpoint(sharedDebugger, lb.module, lb.filename, lb.linenum, lb.condition, breakpoints)))
                 Status = S_OK;
         }
         else if (bt == BreakType::FuncBreak)
@@ -644,12 +644,15 @@ static HRESULT HandleCommand(std::shared_ptr<IDebugger> &sharedDebugger, Breakpo
             struct FuncBreak fb;
 
             if (ProtocolUtils::ParseBreakpoint(args, fb)
-                && SUCCEEDED(breakpointsHandle.SetFuncBreakpoint(sharedDebugger, fb.module, fb.funcname, fb.params, fb.condition, breakpoint)))
+                && SUCCEEDED(breakpointsHandle.SetFuncBreakpoint(sharedDebugger, fb.module, fb.funcname, fb.params, fb.condition, breakpoints)))
                 Status = S_OK;
         }
 
         if (Status == S_OK)
-            PrintBreakpoint(breakpoint, output);
+            for (auto &breakpoint : breakpoints)
+            {
+                PrintBreakpoint(breakpoint, output);
+            }
         else
             output = "Unknown breakpoint location format";
 

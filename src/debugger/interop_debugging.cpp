@@ -1494,6 +1494,22 @@ HRESULT InteropDebugger::SetLineBreakpoints(const std::string& filename, const s
     return Status;
 }
 
+HRESULT InteropDebugger::SetFuncBreakpoints(const std::vector<FuncBreakpoint> &funcBreakpoints, std::vector<Breakpoint> &breakpoints)
+{
+    std::lock_guard<std::mutex> lock(m_waitpidMutex);
+
+    bool allThreadsWereStopped = false;
+    auto StopAllThreads = [&]() { BrkStopAllThreads(allThreadsWereStopped); };
+    auto FixAllThreads = [&](std::uintptr_t checkAddr) { BrkFixAllThreads(checkAddr); };
+    HRESULT Status = m_sharedBreakpoints->InteropSetFuncBreakpoints(m_TGID, m_uniqueInteropLibraries.get(), funcBreakpoints, breakpoints, StopAllThreads, FixAllThreads);
+
+    // Continue threads execution with care about stop events (CallbacksQueue).
+    if (allThreadsWereStopped)
+        ParseThreadsChanges();
+
+    return Status;
+}
+
 HRESULT InteropDebugger::AllBreakpointsActivate(bool act)
 {
     std::lock_guard<std::mutex> lock(m_waitpidMutex);

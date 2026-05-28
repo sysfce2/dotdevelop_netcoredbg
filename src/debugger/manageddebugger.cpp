@@ -34,6 +34,7 @@
 #include "debugger/breakpoint_interop_rendezvous.h"
 #include "debugger/breakpoints_interop.h"
 #include "debugger/breakpoints_interop_line.h"
+#include "debugger/breakpoints_interop_func.h"
 #include "debugger/breakpoints.h"
 #include "debugger/hotreloadhelpers.h"
 #include "debugger/manageddebugger.h"
@@ -963,8 +964,8 @@ HRESULT ManagedDebugger::SetLineBreakpoints(const std::string& filename,
     LogFuncEntry();
 
 #ifdef INTEROP_DEBUGGING
-    // Note, we don't care about m_interopDebugging here, since breakpoint setup could be start before m_interopDebugging changes with env parsing.
-    if (isNativeSource(filename))
+    // Also set interop line breakpoints for native code
+    if (m_interopDebugging && isNativeSource(filename))
         return m_sharedInteropDebugger->SetLineBreakpoints(filename, lineBreakpoints, breakpoints);
 #endif // INTEROP_DEBUGGING
 
@@ -975,6 +976,12 @@ HRESULT ManagedDebugger::SetLineBreakpoints(const std::string& filename,
 HRESULT ManagedDebugger::SetFuncBreakpoints(const std::vector<FuncBreakpoint> &funcBreakpoints, std::vector<Breakpoint> &breakpoints)
 {
     LogFuncEntry();
+
+#ifdef INTEROP_DEBUGGING
+    // Set interop function breakpoints for native code, ignore errors.
+    if (m_interopDebugging)
+        m_sharedInteropDebugger->SetFuncBreakpoints(funcBreakpoints, breakpoints);
+#endif // INTEROP_DEBUGGING
 
     bool haveProcess = HaveDebugProcess();
     return m_sharedBreakpoints->SetFuncBreakpoints(haveProcess, funcBreakpoints, breakpoints);
